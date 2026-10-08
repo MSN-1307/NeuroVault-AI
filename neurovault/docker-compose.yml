@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: neurovault-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: neurovault
+      MYSQL_USER: neurovault
+      MYSQL_PASSWORD: neurovaultpassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ./database/views.sql:/docker-entrypoint-initdb.d/02_views.sql
+      - ./database/procedures.sql:/docker-entrypoint-initdb.d/03_procedures.sql
+      - ./database/triggers.sql:/docker-entrypoint-initdb.d/04_triggers.sql
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/05_seed.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 10s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: neurovault-backend
+    restart: always
+    environment:
+      - DATABASE_URL=mysql+asyncmy://neurovault:neurovaultpassword@mysql:3306/neurovault?charset=utf8mb4
+      - JWT_SECRET_KEY=neurovault-super-secret-jwt-key-2026-production-ready
+      - LLM_PROVIDER=ollama
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+    ports:
+      - "8000:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: neurovault-frontend
+    restart: always
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
