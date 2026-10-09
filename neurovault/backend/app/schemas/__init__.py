@@ -105,8 +105,11 @@ class MemoryCreate(BaseModel):
     category_id: Optional[int] = None
     importance_score: int = Field(default=50, ge=0, le=100)
     confidence_score: int = Field(default=80, ge=0, le=100)
+    status: Optional[str] = "ACTIVE"
+    conflict_with_id: Optional[int] = None
     is_sensitive: bool = False
     tags: List[str] = []
+
 
 class MemoryUpdate(BaseModel):
     content: Optional[str] = None

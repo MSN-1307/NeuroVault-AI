@@ -24,6 +24,8 @@ export const VaultPage: React.FC = () => {
   const [newContent, setNewContent] = useState('');
   const [newType, setNewType] = useState('FACT');
   const [newImportance, setNewImportance] = useState(70);
+  const [newStatus, setNewStatus] = useState('ACTIVE');
+  const [newConflictWithId, setNewConflictWithId] = useState<number | ''>('');
 
   const loadMemories = async () => {
     setLoading(true);
@@ -106,9 +108,13 @@ export const VaultPage: React.FC = () => {
       content: newContent,
       memory_type: newType,
       importance_score: newImportance,
-      confidence_score: 90
+      confidence_score: 90,
+      status: newStatus as any,
+      conflict_with_id: newConflictWithId !== '' ? Number(newConflictWithId) : undefined
     });
     setNewContent('');
+    setNewStatus('ACTIVE');
+    setNewConflictWithId('');
     setShowCreateModal(false);
     loadMemories();
   };
@@ -419,6 +425,38 @@ export const VaultPage: React.FC = () => {
                     onChange={(e) => setNewImportance(Number(e.target.value))}
                     className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none"
                   />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">Status</label>
+                  <select
+                    value={newStatus}
+                    onChange={(e) => setNewStatus(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none"
+                  >
+                    <option value="ACTIVE">ACTIVE (Normal Memory)</option>
+                    <option value="CONFLICTED">CONFLICTED (Epistemic Contradiction)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                    Conflict Target (Optional)
+                  </label>
+                  <select
+                    value={newConflictWithId}
+                    onChange={(e) => setNewConflictWithId(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none"
+                  >
+                    <option value="">None (Standalone)</option>
+                    {memories.slice(0, 30).map((m) => (
+                      <option key={m.id} value={m.id}>
+                        #{m.id}: {m.content.slice(0, 32)}...
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>

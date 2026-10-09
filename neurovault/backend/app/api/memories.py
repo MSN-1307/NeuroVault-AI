@@ -98,6 +98,10 @@ async def create_memory(
     embedder = get_embedding_provider()
     vec = await embedder.embed_text(mem_in.content)
 
+    mem_status = (mem_in.status or "ACTIVE").upper()
+    if mem_status not in ["ACTIVE", "CONFLICTED", "ARCHIVED", "EXPIRED", "DELETED"]:
+        mem_status = "ACTIVE"
+
     new_mem = Memory(
         user_id=current_user.id,
         category_id=mem_in.category_id,
@@ -108,13 +112,27 @@ async def create_memory(
         importance_score=mem_in.importance_score,
         confidence_score=mem_in.confidence_score,
         quality_score=int((mem_in.importance_score + mem_in.confidence_score) / 2),
-        status="ACTIVE",
+        status=mem_status,
         is_sensitive=mem_in.is_sensitive,
         version_number=1,
         created_at=datetime.utcnow()
     )
     db.add(new_mem)
     await db.flush()
+
+    # Link conflict edge if requested or if status is CONFLICTED
+    if mem_in.conflict_with_id:
+        target_mem = await db.get(Memory, mem_in.conflict_with_id)
+        if target_mem and target_mem.user_id == current_user.id:
+            # Mark target as CONFLICTED too if appropriate
+            target_mem.status = "CONFLICTED"
+            rel = MemoryRelation(
+                source_memory_id=new_mem.id,
+                target_memory_id=target_mem.id,
+                relation_type="CONTRADICTS",
+                confidence=90
+            )
+            db.add(rel)
 
     # Link tags
     if mem_in.tags:
@@ -134,7 +152,7 @@ async def create_memory(
         action="CREATE_MEMORY",
         entity_type="memories",
         entity_id=new_mem.id,
-        metadata_json={"type": new_mem.memory_type}
+        metadata_json={"type": new_mem.memory_type, "status": mem_status}
     )
     db.add(audit)
     await db.commit()

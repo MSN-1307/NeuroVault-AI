@@ -33,6 +33,7 @@ export interface Memory {
   quality_score: number;
   status: 'ACTIVE' | 'ARCHIVED' | 'CONFLICTED' | 'EXPIRED' | 'DELETED';
   is_sensitive: boolean;
+  conflict_with_id?: number;
   version_number: number;
   created_at: string;
   updated_at?: string;
